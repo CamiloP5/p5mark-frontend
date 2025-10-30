@@ -15,7 +15,7 @@ export default async function HomePage() {
       <ul style={{ display: 'grid', gap: '1rem' }}>
         {posts.map((p) => (
           <li key={p.id} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem' }}>
-            <a href={`/post/${p.slug}`} style={{ fontSize: '1.125rem', color: '#2563eb', textDecoration: 'none' }}>
+            <a href={`/${p.slug}`} style={{ fontSize: '1.125rem', color: '#2563eb', textDecoration: 'none' }}>
               {p.title}
             </a>
             {p.date && (
