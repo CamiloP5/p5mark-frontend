@@ -1,4 +1,5 @@
 // src/app/[slug]/page.tsx
+//slug is the dynamic route parameter
 import { notFound } from 'next/navigation';
 import { fetchGraphQL } from '@/lib/graphql';
 import parse from 'html-react-parser';
