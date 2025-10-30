@@ -1,7 +1,8 @@
 // src/app/[slug]/page.tsx
 
 import { notFound } from 'next/navigation';
-import { fetchGraphQL } from '@/lib/graphql';
+// Importamos la función que acabas de compartir
+import { fetchGraphQL } from '@/lib/graphql'; 
 import parse from 'html-react-parser';
 
 type WPImage = { node?: { sourceUrl?: string; altText?: string } };
@@ -14,10 +15,8 @@ type WPPost = {
   featuredImage?: WPImage;
 };
 
-// --- ESTRATEGIA DE RENDERIZADO: ISR (Generación Estática Incremental) ---
-// Next.js intentará generar esta página estáticamente en tiempo de build.
-// Si no está en generateStaticParams, la generará bajo demanda (fallback).
-// Luego, la regenerará en el servidor cada 3600 segundos (1 hora).
+// Establecemos la Revalidación Estática Incremental (ISR)
+// La página se regenerará en el servidor cada 3600 segundos (1 hora).
 export const revalidate = 3600; 
 // Eliminamos: export const dynamic = 'force-dynamic';
 
@@ -27,26 +26,29 @@ export const revalidate = 3600;
 async function getAllPostSlugs(): Promise<string[]> {
   const query = /* GraphQL */ `
     query AllPostsSlugs {
-      posts(first: 100) { # Ajusta el 'first' según el límite de posts que tengas
+      posts(first: 1000) { # Aumenté el límite a 1000 por si tienes muchos posts
         nodes {
           slug
         }
       }
     }
   `;
-  // Asumiendo que fetchGraphQL maneja la estructura de la respuesta
-  const data = await fetchGraphQL<{ posts: { nodes: { slug: string }[] } }>(query);
-  return data.posts.nodes.map(node => node.slug);
+  try {
+      const data = await fetchGraphQL<{ posts: { nodes: { slug: string }[] } }>(query);
+      return data.posts.nodes.map(node => node.slug);
+  } catch (e) {
+      // Si falla al obtener los slugs en el build, loguea el error y devuelve un array vacío
+      console.error("Error fetching all post slugs for generateStaticParams:", e);
+      return []; 
+  }
 }
 
 // --------------------------------------------------------------------------
-// FUNCIÓN DE NEXT.JS: Indica qué páginas deben generarse en el build
+// FUNCIÓN DE NEXT.JS: Indica qué páginas deben generarse en el build (CRUCIAL)
 // --------------------------------------------------------------------------
 export async function generateStaticParams() {
   const slugs = await getAllPostSlugs();
   
-  // Devuelve un array de objetos con el parámetro dinámico.
-  // Esto genera rutas como /mi-slug-1, /mi-slug-2, etc., en tiempo de build.
   return slugs.map((slug) => ({
     slug: slug,
   }));
@@ -68,25 +70,25 @@ async function getPostBySlug(slug: string): Promise<WPPost | null> {
       }
     }
   `;
-  // La revalidación (revalidate = 3600) se encarga de que esta llamada
-  // se refresque periódicamente en el servidor de Vercel.
-  const data = await fetchGraphQL<{ post: WPPost | null }>(query, { slug });
-  return data.post;
+  try {
+      const data = await fetchGraphQL<{ post: WPPost | null }>(query, { slug });
+      return data.post;
+  } catch (e) {
+      console.error(`Error fetching post with slug ${slug}:`, e);
+      return null;
+  }
 }
 
 // --------------------------------------------------------------------------
 // COMPONENTE DE LA PÁGINA
 // --------------------------------------------------------------------------
 export default async function PostPage({ params }: { params: { slug: string } }) {
-  // Ya no necesitamos 'decodeURIComponent' ni el 'trim()' porque el slug 
-  // que viene de Vercel ya debería estar limpio.
   const { slug } = params;
   
-  if (!slug) return notFound(); // Esto es una verificación de seguridad
+  if (!slug) return notFound();
 
   const post = await getPostBySlug(slug);
   
-  // Si el post no existe o el fetch falló, Next.js devuelve un 404 (funciona bien)
   if (!post) return notFound(); 
 
   return (
@@ -94,7 +96,6 @@ export default async function PostPage({ params }: { params: { slug: string } })
       <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{post.title}</h1>
 
       {post.featuredImage?.node?.sourceUrl && (
-        // *Recomendación:* Usar el componente <Image> de Next.js para optimización
         <img
           src={post.featuredImage.node.sourceUrl}
           alt={post.featuredImage.node.altText || post.title}
