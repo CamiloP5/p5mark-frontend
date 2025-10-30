@@ -1,4 +1,5 @@
 // src/lib/api.ts
+// trigger redeploy
 import { fetchGraphQL } from './graphql';
 
 type WPImage = { node?: { sourceUrl?: string; altText?: string } };
