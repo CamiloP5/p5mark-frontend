@@ -33,8 +33,15 @@ async function getPostBySlug(slug: string): Promise<WPPost | null> {
   return data.post;
 }
 
-export default async function PostPage({ params }: { params: { slug: string } }) {
-  const post = await getPostBySlug(params.slug);
+export default async function PostPage({ params }: { params: { slug?: string } }) {
+  const slug = decodeURIComponent(params?.slug ?? '');
+
+  // Log temporal para Vercel Runtime
+  console.log('POST ROUTE params.slug =', slug);
+
+  if (!slug) return notFound();
+
+  const post = await getPostBySlug(slug);
   if (!post) return notFound();
 
   return (
