@@ -17,6 +17,7 @@ type WPNode = {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
+// === Función que consulta WordPress por URI ===
 async function getNodeByUri(uri: string): Promise<WPNode | null> {
   const query = /* GraphQL */ `
     query NodeByUri($uri: String!) {
@@ -28,7 +29,12 @@ async function getNodeByUri(uri: string): Promise<WPNode | null> {
           title
           date
           content
-          featuredImage { node { sourceUrl altText } }
+          featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
         }
         ... on Page {
           id
@@ -36,26 +42,53 @@ async function getNodeByUri(uri: string): Promise<WPNode | null> {
           title
           date
           content
-          featuredImage { node { sourceUrl altText } }
+          featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
         }
       }
     }
   `;
-  const data = await fetchGraphQL<{ nodeByUri: WPNode | null }>(query, { uri });
-  return data.nodeByUri ?? null;
+
+  try {
+    const data = await fetchGraphQL<{ nodeByUri: any }>(query, { uri });
+    console.log('✅ GQL nodeByUri OK → uri:', uri, '→ typename:', data?.nodeByUri?.__typename);
+    return data?.nodeByUri ?? null;
+  } catch (e: any) {
+    console.error('❌ GQL nodeByUri ERROR → uri:', uri, '→', e?.message || e);
+    return null;
+  }
 }
 
+// === Página dinámica ===
 export default async function PostPage({ params }: { params: { slug?: string } }) {
   const slug = decodeURIComponent(params?.slug ?? '').replace(/^\/+|\/+$/g, '');
+  console.log('📍 ROUTE /[slug] → params.slug =', slug);
+
   if (!slug) return notFound();
 
-  // Probamos con "/slug/" (WordPress suele guardar la URI con slash final)
-  const node = (await getNodeByUri(`/${slug}/`)) ?? (await getNodeByUri(`/${slug}`));
-  if (!node) return notFound();
+  const withSlash = `/${slug}/`;
+  const withoutSlash = `/${slug}`;
+
+  console.log('🔎 Probando con:', withSlash, 'y', withoutSlash);
+
+  const node =
+    (await getNodeByUri(withSlash)) ??
+    (await getNodeByUri(withoutSlash));
+
+  if (!node) {
+    console.warn('⚠️ No node found for', withSlash, 'or', withoutSlash);
+    return notFound();
+  }
 
   return (
     <main style={{ maxWidth: 800, margin: '0 auto', padding: '2rem' }}>
-      <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>{node.title}</h1>
+      <h1 style={{ fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>
+        {node.title}
+      </h1>
 
       {node.featuredImage?.node?.sourceUrl && (
         <img
