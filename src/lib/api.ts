@@ -38,5 +38,11 @@ export async function getPosts(count: number = 10): Promise<WPPost[]> {
     return [];
   }
 }
- 
-
+//src/types.ts
+//src/app/lib/api.ts
+//src/app/lib/graphql.ts
+//src/components/PostCard.tsx
+//src/app/page.tsx
+//src/app/[slug]/page.tsx
+//src/app/layout.tsx
+//src/components/PostCard.tsx

@@ -1,22 +1,10 @@
-// src/app/[slug]/page.tsx
-
 import { notFound } from 'next/navigation';
-// Importamos la función que acabas de compartir
 import { fetchGraphQL } from '@/lib/graphql'; 
 import parse from 'html-react-parser';
-
-type WPImage = { node?: { sourceUrl?: string; altText?: string } };
-type WPPost = {
-  id: string;
-  slug: string;
-  title: string;
-  date?: string;
-  content?: string;
-  featuredImage?: WPImage;
-};
+import { WPImage, WPPost } from '@/types'; // Usamos el tipo centralizado
 
 // Establecemos la Revalidación Estática Incremental (ISR)
-// La página se regenerará en el servidor cada 3600 segundos (1 hora).
+// Next.js regenerará esta página en el servidor cada 3600 segundos (1 hora)
 export const revalidate = 3600; 
 // Eliminamos: export const dynamic = 'force-dynamic';
 
@@ -26,7 +14,7 @@ export const revalidate = 3600;
 async function getAllPostSlugs(): Promise<string[]> {
   const query = /* GraphQL */ `
     query AllPostsSlugs {
-      posts(first: 1000) { # Aumenté el límite a 1000 por si tienes muchos posts
+      posts(first: 1000) { 
         nodes {
           slug
         }
@@ -37,7 +25,8 @@ async function getAllPostSlugs(): Promise<string[]> {
       const data = await fetchGraphQL<{ posts: { nodes: { slug: string }[] } }>(query);
       return data.posts.nodes.map(node => node.slug);
   } catch (e) {
-      // Si falla al obtener los slugs en el build, loguea el error y devuelve un array vacío
+      // Devolver un array vacío forzará a Next.js a generar solo las rutas necesarias al inicio.
+      // Si esto falla, el post se generará la primera vez que se solicite (On-demand).
       console.error("Error fetching all post slugs for generateStaticParams:", e);
       return []; 
   }
@@ -49,6 +38,7 @@ async function getAllPostSlugs(): Promise<string[]> {
 export async function generateStaticParams() {
   const slugs = await getAllPostSlugs();
   
+  // Mapeamos los slugs al formato { slug: string } requerido por Next.js
   return slugs.map((slug) => ({
     slug: slug,
   }));
@@ -71,6 +61,7 @@ async function getPostBySlug(slug: string): Promise<WPPost | null> {
     }
   `;
   try {
+      // Aquí se utiliza la estrategia de caché definida en fetchGraphQL (revalidate: 300)
       const data = await fetchGraphQL<{ post: WPPost | null }>(query, { slug });
       return data.post;
   } catch (e) {
@@ -85,10 +76,12 @@ async function getPostBySlug(slug: string): Promise<WPPost | null> {
 export default async function PostPage({ params }: { params: { slug: string } }) {
   const { slug } = params;
   
+  // Verificación de slug: Aunque generateStaticParams garantiza slugs, es buena práctica.
   if (!slug) return notFound();
 
   const post = await getPostBySlug(slug);
   
+  // Si no hay post, devuelve el 404 (ahora más seguro, porque las páginas existen estáticamente)
   if (!post) return notFound(); 
 
   return (
