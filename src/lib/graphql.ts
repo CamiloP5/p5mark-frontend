@@ -1,53 +1,65 @@
 const API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://p5marketing.com/graphql';
+
+// Configuración de reintentos
 const MAX_RETRIES = 3;
 
 /**
- * Función para hacer peticiones GraphQL con lógica de reintento.
- * Esto es crucial para la estabilidad de generateStaticParams durante el build de Vercel,
- * que a veces falla por errores de red transitorios.
+ * Función genérica para realizar consultas GraphQL con manejo de errores y reintentos.
+ * @param query La cadena de la consulta GraphQL.
+ * @param variables Un objeto con las variables de la consulta.
+ * @returns La data esperada por la consulta.
  */
 export async function fetchGraphQL<T>(
   query: string,
   variables: Record<string, any> = {},
-  options: { retries: number } = { retries: 0 }
+  retries = 0
 ): Promise<T> {
-    const { retries } = options;
+  const nextRevalidate = retries === 0 ? 300 : 0; // Solo cachear en el primer intento
 
-    try {
-        const res = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ query, variables }),
-            // Usamos 'force-cache' para el build (generateStaticParams) y 'no-cache' si quieres evitar el caché en tiempo de ejecución.
-            // Para ISR (revalidate), 'next' es suficiente. Lo mantendremos así:
-            next: { revalidate: 300 }, // Cache de 5 min
-        });
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables }),
+      // Usamos el caching de Next.js (ISR)
+      next: { revalidate: nextRevalidate },
+      cache: 'force-cache', // Usar caché por defecto
+    });
 
-        if (!res.ok) {
-            throw new Error(`GraphQL HTTP ${res.status} - ${res.statusText}`);
-        }
-
-        const json = await res.json();
-
-        if (json.errors) {
-            // Un error GraphQL (ej. el slug no existe)
-            throw new Error(JSON.stringify(json.errors));
-        }
-
-        return json.data;
-    } catch (error) {
-        if (retries < MAX_RETRIES) {
-            const nextRetries = retries + 1;
-            console.warn(`[GraphQL Fetch] Falló la petición. Reintentando (${nextRetries}/${MAX_RETRIES})... Error: ${error.message}`);
-            
-            // Espera exponencial antes de reintentar (1s, 2s, 4s...)
-            await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retries)));
-            
-            return fetchGraphQL<T>(query, variables, { retries: nextRetries });
-        }
-        
-        // Si fallan todos los reintentos, lanza el error.
-        console.error(`[GraphQL Fetch] Falló la petición después de ${MAX_RETRIES} intentos. URL: ${API_URL}`);
-        throw error;
+    if (!res.ok) {
+      // Si la respuesta no es 200 (ej. 404, 500)
+      throw new Error(`GraphQL HTTP ${res.status} error during fetch.`);
     }
+
+    const json = await res.json();
+
+    if (json.errors) {
+      // Si el servidor GraphQL responde 200, pero devuelve errores de consulta
+      throw new Error(JSON.stringify(json.errors, null, 2));
+    }
+
+    return json.data;
+  } catch (error) {
+    if (retries < MAX_RETRIES) {
+      const nextRetries = retries + 1;
+      
+      // Manejo seguro del error 'unknown'
+      let errorMessage = 'Unknown error';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      console.warn(`[GraphQL Fetch] Falló la petición. Reintentando (${nextRetries}/${MAX_RETRIES})... Error: ${errorMessage}`);
+      
+      // Espera exponencial antes de reintentar (1s, 2s, 4s...)
+      await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retries)));
+      
+      return fetchGraphQL(query, variables, nextRetries);
+    }
+    
+    // Si agotamos los reintentos, lanzamos el error
+    throw error;
+  }
 }
