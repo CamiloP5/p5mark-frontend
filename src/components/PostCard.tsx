@@ -16,6 +16,9 @@ export default function PostCard({ post }: PostCardProps) {
   // La ruta actualizada a la nueva estructura /posts/[slug]
   const postUrl = `/posts/${post.slug}`;
 
+  // DEBUG: Confirma la URL generada antes de la navegación
+  console.log(`[DEBUG PostCard] Generando enlace para el post "${post.title}": ${postUrl}`);
+
   return (
     <Link 
       href={postUrl} 
