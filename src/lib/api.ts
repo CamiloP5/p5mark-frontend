@@ -1,32 +1,42 @@
-// src/lib/api.ts
-// trigger redeploy
+//src/lib/api.ts
 import { fetchGraphQL } from './graphql';
+import { WPPost } from '@/types';
 
-type WPImage = { node?: { sourceUrl?: string; altText?: string } };
-export type WPPost = {
-  id: string;
-  slug: string;
-  title: string;
-  date?: string;
-  excerpt?: string;
-  featuredImage?: WPImage;
-};
-
-export async function getPosts(limit = 10): Promise<WPPost[]> {
+/**
+ * Obtiene una lista de posts recientes desde WordPress.
+ * @param count Número de posts a obtener.
+ * @returns Array de objetos WPPost.
+ */
+export async function getPosts(count: number = 10): Promise<WPPost[]> {
   const query = /* GraphQL */ `
-    query AllPosts($first: Int!) {
-      posts(first: $first, where: { status: PUBLISH, orderby: { field: DATE, order: DESC } }) {
+    query RecentPosts($count: Int) {
+      posts(first: $count) {
         nodes {
           id
           slug
           title
           date
-          excerpt
-          featuredImage { node { sourceUrl altText } }
+          featuredImage {
+            node {
+              sourceUrl
+              altText
+            }
+          }
         }
       }
     }
   `;
-  const data = await fetchGraphQL<{ posts: { nodes: WPPost[] } }>(query, { first: limit });
-  return data.posts.nodes ?? [];
+
+  try {
+    const data = await fetchGraphQL<{ posts: { nodes: WPPost[] } }>(query, { count });
+    // Usamos el mismo filtro de validación que en el [slug]
+    if (!data || !data.posts || !data.posts.nodes) return [];
+    
+    return data.posts.nodes.filter(post => post.slug && post.title); // Aseguramos que tengan slug y título
+  } catch (e) {
+    console.error("Error fetching recent posts for Home Page:", e);
+    return [];
+  }
 }
+ 
+

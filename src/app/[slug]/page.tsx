@@ -1,3 +1,4 @@
+//src/app/[slug]/page.tsx
 import PostCard from '@/components/PostCard';
 import { fetchGraphQL } from '@/lib/graphql';
 import { WPPost } from '@/types';
