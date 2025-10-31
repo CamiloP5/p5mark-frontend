@@ -13,23 +13,31 @@ export default async function HomePage() {
       </h1>
 
       <ul style={{ display: 'grid', gap: '1rem' }}>
-        {posts.map((p) => (
-          <li key={p.id} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem' }}>
-            
-            {/* --- LA CORRECCIÓN ESTÁ AQUÍ --- */}
-            {/* Reemplazamos <a> por <Link> para navegación de Next.js */}
-            <Link href={`/${p.slug}`} style={{ fontSize: '1.125rem', color: '#2563eb', textDecoration: 'none' }}>
-              {p.title}
-            </Link>
-            {/* --- FIN DE LA CORRECCIÓN --- */}
+        {posts.map((p) => {
+          // --- DEBUGGING ---
+          // Vamos a imprimir el slug en el log del servidor (Vercel)
+          // para asegurarnos de que no sea nulo o indefinido.
+          console.log(`[Home Page] Rendering link, slug: /${p.slug}`);
+          // --- FIN DEBUGGING ---
 
-            {p.date && (
-              <div style={{ color: '#6b7280', fontSize: 12, marginTop: 6 }}>
-                {new Date(p.date).toLocaleDateString()}
-              </div>
-            )}
-          </li>
-        ))}
+          return (
+            <li key={p.id} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '1rem' }}>
+              
+              {/* --- LA CORRECCIÓN ESTÁ AQUÍ --- */}
+              {/* Reemplazamos <a> por <Link> para navegación de Next.js */}
+              <Link href={`/${p.slug}`} style={{ fontSize: '1.125rem', color: '#2563eb', textDecoration: 'none' }}>
+                {p.title}
+              </Link>
+              {/* --- FIN DE LA CORRECCIÓN --- */}
+
+              {p.date && (
+                <div style={{ color: '#6b7280', fontSize: 12, marginTop: 6 }}>
+                  {new Date(p.date).toLocaleDateString()}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </main>
   );
