@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { WPPost } from '@/types'; // Importamos el tipo centralizado
+import { WPPost } from '@/types'; 
 
 interface PostCardProps {
   post: WPPost;
@@ -13,9 +13,8 @@ export default function PostCard({ post }: PostCardProps) {
     return null; // No renderizar si no hay post o slug
   }
   
-  // La ruta debe coincidir con la estructura de directorios: /[slug]
-  // Si tu post tiene un slug "mi-primer-post", la URL será /mi-primer-post
-  const postUrl = `/${post.slug}`;
+  // *** CORRECCIÓN CRÍTICA: Nueva ruta dinámica /posts/[slug] ***
+  const postUrl = `/posts/${post.slug}`; // <-- ¡Ruta actualizada!
 
   return (
     <Link 
@@ -33,6 +32,7 @@ export default function PostCard({ post }: PostCardProps) {
         )}
         
         {post.featuredImage?.node?.sourceUrl && (
+          // Usar 'w-full' para asegurar que la imagen es responsive
           <img
             src={post.featuredImage.node.sourceUrl}
             alt={post.featuredImage.node.altText || post.title}
@@ -40,7 +40,6 @@ export default function PostCard({ post }: PostCardProps) {
           />
         )}
         
-        {/* Aquí podrías mostrar un extracto, si tu GraphQL lo soporta */}
         <p className="text-gray-600">
             Click para leer más...
         </p>
