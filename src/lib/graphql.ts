@@ -1,3 +1,4 @@
+//src/lib/graphql.ts
 const API_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || 'https://p5marketing.com/graphql';
 
 // Configuración de reintentos
