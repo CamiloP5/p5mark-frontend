@@ -1,12 +1,17 @@
-import { notFound } from 'next/navigation';
-import { fetchGraphQL } from '@/lib/graphql'; 
-import { WPPost } from '@/types';
-import parse from 'html-react-parser'; 
+  import { notFound } from 'next/navigation';
+  import { fetchGraphQL } from '@/lib/graphql'; 
+  import { WPPost } from '@/types';
+  import parse from 'html-react-parser'; 
 
-export const revalidate = 3600; 
+  export const revalidate = 3600; 
+  // --- LA SOLUCIÓN ---
+  // Le decimos a Next.js que intente renderizar slugs
+  // que no fueron encontrados en generateStaticParams
+  export const dynamicParams = true; 
+  // --- FIN DE LA SOLUCIÓN ---
 
-// --- (Función getAllPostSlugs) ---
-async function getAllPostSlugs(): Promise<string[]> {
+  // --- (Función getAllPostSlugs) ---
+  async function getAllPostSlugs(): Promise<string[]> {
   const query = /* GraphQL */ `
     query AllPostsSlugs {
       posts(first: 1000) { nodes { slug } }
