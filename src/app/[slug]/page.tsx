@@ -7,40 +7,40 @@
   // --- LA SOLUCIÓN ---
   // Le decimos a Next.js que intente renderizar slugs
   // que no fueron encontrados en generateStaticParams
-  export const dynamicParams = true; 
+  //export const dynamicParams = true; 
   // --- FIN DE LA SOLUCIÓN ---
 
   // --- (Función getAllPostSlugs) ---
-  async function getAllPostSlugs(): Promise<string[]> {
-  const query = /* GraphQL */ `
-    query AllPostsSlugs {
-      posts(first: 1000) { nodes { slug } }
-    }
-  `;
-  try {
-      const data = await fetchGraphQL<{ posts: { nodes: { slug: string }[] } }>(query);
-      if (!data || !data.posts || !data.posts.nodes) {
-          console.error("[generateStaticParams] GraphQL response for slugs is malformed.");
-          return [];
-      }
-      const slugs = data.posts.nodes.map(node => node.slug).filter(slug => slug);
-      console.log(`[generateStaticParams] Fetched ${slugs.length} slugs for build.`);
+  //async function getAllPostSlugs(): Promise<string[]> {
+  //const query = /* GraphQL */ `
+  //  query AllPostsSlugs {
+  //    posts(first: 1000) { nodes { slug } }
+  //  }
+  //`;
+  //try {
+  //    const data = await fetchGraphQL<{ posts: { nodes: { slug: string }[] } }>(query);
+  //    if (!data || !data.posts || !data.posts.nodes) {
+  //        console.error("[generateStaticParams] GraphQL response for slugs is malformed.");
+  //        return [];
+  //    }
+  //    const slugs = data.posts.nodes.map(node => node.slug).filter(slug => slug);
+  //    console.log(`[generateStaticParams] Fetched ${slugs.length} slugs for build.`);
       // --- DEBUGGING ---
       // Imprime los primeros 10 slugs para ver qué está obteniendo
-      console.log(`[generateStaticParams] Sample slugs: ${slugs.slice(0, 10).join(', ')}`);
+  //    console.log(`[generateStaticParams] Sample slugs: ${slugs.slice(0, 10).join(', ')}`);
       // --- FIN DEBUGGING ---
-      return slugs;
-  } catch (e) {
-      console.error("❌ CRITICAL ERROR fetching all post slugs for generateStaticParams:", e);
-      return []; 
-  }
-}
+  //    return slugs;
+  //} catch (e) {
+  //    console.error("❌ CRITICAL ERROR fetching all post slugs for generateStaticParams:", e);
+  //    return []; 
+  //}
+//}
 
 // --- (Función generateStaticParams) ---
-export async function generateStaticParams() {
-  const slugs = await getAllPostSlugs();
-  return slugs.map((slug) => ({ slug: slug }));
-}
+//export async function generateStaticParams() {
+//  const slugs = await getAllPostSlugs();
+//  return slugs.map((slug) => ({ slug: slug }));
+//}
 
 // --- (Función getPostBySlug) ---
 async function getPostBySlug(slug: string): Promise<WPPost | null> {
