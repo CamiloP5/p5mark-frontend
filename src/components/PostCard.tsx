@@ -13,39 +13,37 @@ export default function PostCard({ post }: PostCardProps) {
     return null; // No renderizar si no hay post o slug
   }
   
-  // *** CORRECCIÓN CRÍTICA: Nueva ruta dinámica /posts/[slug] ***
-  const postUrl = `/posts/${post.slug}`; // <-- ¡Ruta actualizada!
+  // La ruta actualizada a la nueva estructura /posts/[slug]
+  const postUrl = `/posts/${post.slug}`;
 
   return (
-    // Hemos comentado la etiqueta <Link> para mostrar el JSON directamente
-    <div 
-      className="block p-5 border border-gray-200 rounded-lg shadow-xl transition duration-200 ease-in-out bg-gray-50 border-red-500"
-    >
-      <article>
-        <h2 className="text-xl font-semibold text-red-700 mb-2">
-          DEBUGGING: Post Data
-        </h2>
-        
-        {/* Mostrar el JSON de todo el objeto post con formato */}
-        <pre className="whitespace-pre-wrap text-xs bg-red-50 p-3 rounded-md overflow-x-auto">
-          {JSON.stringify(post, null, 2)}
-        </pre>
-        
-        <p className="text-gray-600 mt-4">
-            *** Esta es una vista de DEBUG ***
-        </p>
-
-      </article>
-    </div>
-    /*
     <Link 
       href={postUrl} 
       className="block p-5 border border-gray-200 rounded-lg hover:shadow-lg transition duration-200 ease-in-out bg-white"
     >
       <article>
-        ... contenido original ...
+        <h2 className="text-xl font-semibold text-gray-800 mb-2 hover:text-blue-600">
+          {post.title}
+        </h2>
+        {post.date && (
+          <p className="text-sm text-gray-500 mb-3">
+            Publicado el: {new Date(post.date).toLocaleDateString()}
+          </p>
+        )}
+        
+        {post.featuredImage?.node?.sourceUrl && (
+          <img
+            src={post.featuredImage.node.sourceUrl}
+            alt={post.featuredImage.node.altText || post.title}
+            className="w-full h-48 object-cover rounded-md mb-4"
+          />
+        )}
+        
+        <p className="text-gray-600">
+            Click para leer más...
+        </p>
+
       </article>
     </Link>
-    */
   );
 }
