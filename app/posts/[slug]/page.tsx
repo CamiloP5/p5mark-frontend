@@ -1,42 +1,37 @@
-import { fetchPosts, fetchPostBySlug } from '@/lib/api-rest';
+// app/[slug]/page.tsx
+import { getPosts, getPost } from '@/lib/api'; // ← única fuente: GraphQL
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 
 export const revalidate = 60;
 
-// Definimos el tipo esperado para los datos que devuelve fetchPosts,
-// solo necesitamos el slug para generateStaticParams.
-type PostForStaticParams = {
-  slug: string;
-};
+type PostForStaticParams = { slug: string };
 
-// (opcional, pero recomendado) pre-genera slugs para evitar 404
+// Pre-genera slugs (evita 404 en build/ISR)
 export async function generateStaticParams() {
   try {
-    // Asumiendo que fetchPosts devuelve un array de PostForStaticParams[]
-    const posts: PostForStaticParams[] = await fetchPosts({ perPage: 50 }); 
-    
-    // Aseguramos que solo devolvemos objetos con un slug válido
+    const posts: PostForStaticParams[] = await getPosts();
     return posts
-      .filter(p => p.slug) 
-      .map(p => ({ slug: p.slug }));
-      
+      .filter((p) => p.slug)
+      .map((p) => ({ slug: p.slug }));
   } catch (error) {
-    // 🚨 Capturamos el error de fetch y evitamos que detenga la compilación.
-    // Esto es crucial para la robustez del build.
-    console.error("BUILD ERROR: Failed to fetch posts for generateStaticParams. API issue?", error);
-    return []; // Devolvemos un array vacío para que el build continúe.
+    console.error(
+      'BUILD ERROR: Failed to fetch posts for generateStaticParams. API issue?',
+      error
+    );
+    return [];
   }
 }
 
 export default async function PostPage({
   params,
 }: {
-  // 👇 En Next 16, params es una Promise
+  // Si en tu versión de Next params es Promise, dejamos este patrón:
   params: Promise<{ slug: string }>;
 }) {
-  const { slug } = await params;              // 👈 UNWRAP
-  const post = await fetchPostBySlug(slug);   // usa el slug ya “awaited”
+  const { slug } = await params;
+
+  const post = await getPost(slug);
   if (!post) return notFound();
 
   return (
@@ -45,16 +40,19 @@ export default async function PostPage({
         className="text-3xl font-bold mb-4"
         dangerouslySetInnerHTML={{ __html: post.title }}
       />
-      {post.featuredImage && (
+
+      {post.featuredImage?.src && (
         <div className="relative mb-6 aspect-[16/9] overflow-hidden rounded-xl">
           <Image
             src={post.featuredImage.src}
             alt={post.featuredImage.alt || ''}
             fill
             style={{ objectFit: 'cover' }}
+            priority
           />
         </div>
       )}
+
       <article
         className="prose prose-neutral max-w-none"
         dangerouslySetInnerHTML={{ __html: post.content || '' }}

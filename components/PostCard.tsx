@@ -13,17 +13,18 @@ export default function PostCard({ post }: { post: WPPost }) {
 
   return (
     <article className="rounded-2xl border p-4 shadow-sm">
-      {img && (
+      {img?.src && (
         <div className="relative mb-3 aspect-[16/9] overflow-hidden rounded-xl">
           <Image
             src={img.src}
-            alt={img.alt || post.title}
+            alt={img.alt || stripHtml(post.title)}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
             style={{ objectFit: 'cover' }}
           />
         </div>
       )}
+
 
       <h2 className="text-xl font-semibold mb-2">
         <Link href={`/posts/${post.slug}`}>{stripHtml(post.title)}</Link>

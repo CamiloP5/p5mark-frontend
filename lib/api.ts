@@ -1,13 +1,128 @@
+// lib/api.ts
 import type { WPPost } from './types';
-import { fetchPosts, fetchPostBySlug } from './api-rest';
-import { gqlFetchPosts, gqlFetchPost } from './api-graphql';
 
-const PROVIDER = (process.env.NEXT_PUBLIC_WP_PROVIDER || 'rest').toLowerCase(); // 'rest' | 'graphql'
-
-export async function getPosts(): Promise<WPPost[]> {
-  return PROVIDER === 'graphql' ? gqlFetchPosts() : fetchPosts();
+function requiredEnv(name: string): string {
+  const v = process.env[name];
+  if (!v) throw new Error(`Falta ${name} (ej: https://p5marketing.com/graphql)`);
+  return v;
 }
 
-export async function getPostBySlug(slug: string): Promise<WPPost | null> {
-  return PROVIDER === 'graphql' ? gqlFetchPost(slug) : fetchPostBySlug(slug);
+const GQL = requiredEnv('NEXT_PUBLIC_WP_GRAPHQL'); // <- ahora es string
+
+type GqlResponse<T> = { data: T; errors?: any };
+
+async function gql<T>(query: string, variables?: Record<string, any>): Promise<T> {
+  const res = await fetch(GQL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, variables }),
+    next: { revalidate: 60 }, // ISR
+  });
+  if (!res.ok) throw new Error(`GraphQL HTTP ${res.status}`);
+  const json: GqlResponse<T> = await res.json();
+  if (json.errors) throw new Error('GraphQL errors');
+  return json.data;
+}
+
+// Normaliza el post al shape WPPost (incluye fallbacks de imagen)
+function mapPost(n: any): WPPost {
+  const img = n.featuredImage?.node;
+
+  // Fallbacks: sourceUrl -> size(full) -> size(large) -> mediaItemUrl
+  const sizes: Array<any> | undefined = img?.mediaDetails?.sizes;
+  const sizeFull = sizes?.find(s => s?.name === 'full');
+  const sizeLarge = sizes?.find(s => s?.name === 'large');
+
+  const src =
+    img?.sourceUrl ||
+    sizeFull?.sourceUrl ||
+    sizeLarge?.sourceUrl ||
+    img?.mediaItemUrl ||
+    null;
+
+  return {
+    id: n.databaseId,
+    slug: n.slug,
+    title: n.title ?? '',
+    excerpt: n.excerpt ?? '',
+    content: n.content ?? undefined,
+    date: n.date ?? undefined,
+    featuredImage: src
+      ? {
+          src,
+          alt: img?.altText || '',
+          width: img?.mediaDetails?.width ?? sizeFull?.width ?? sizeLarge?.width,
+          height: img?.mediaDetails?.height ?? sizeFull?.height ?? sizeLarge?.height,
+        }
+      : null,
+  };
+}
+
+// === Public API ===
+export async function getPosts(): Promise<WPPost[]> {
+  const query = /* GraphQL */ `
+    query Posts {
+      posts(first: 12) {
+        nodes {
+          databaseId
+          slug
+          date
+          title
+          excerpt
+          featuredImage {
+            node {
+              sourceUrl
+              mediaItemUrl
+              altText
+              mediaDetails {
+                width
+                height
+                sizes {
+                  name
+                  sourceUrl
+                  width
+                  height
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const data = await gql<{ posts: { nodes: any[] } }>(query);
+  return data.posts.nodes.map(mapPost);
+}
+
+export async function getPost(slug: string): Promise<WPPost | null> {
+  const query = /* GraphQL */ `
+    query PostBySlug($slug: ID!) {
+      post(id: $slug, idType: SLUG) {
+        databaseId
+        slug
+        date
+        title
+        content
+        featuredImage {
+          node {
+            sourceUrl
+            mediaItemUrl
+            altText
+            mediaDetails {
+              width
+              height
+              sizes {
+                name
+                sourceUrl
+                width
+                height
+              }
+            }
+          }
+        }
+      }
+    }
+  `;
+  const data = await gql<{ post: any }>(query, { slug });
+  return data.post ? mapPost(data.post) : null;
 }

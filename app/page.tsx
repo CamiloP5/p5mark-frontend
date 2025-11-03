@@ -1,4 +1,4 @@
-import { fetchPosts } from '@/lib/api-rest';
+// app/page.tsx
 import PostCard from '@/components/PostCard';
 import { getPosts } from '@/lib/api';
 
