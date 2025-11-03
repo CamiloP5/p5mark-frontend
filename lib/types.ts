@@ -1,3 +1,4 @@
+// lib/types.ts
 export type WPImage = {
     src: string;
     alt?: string;
