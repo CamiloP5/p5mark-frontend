@@ -18,9 +18,24 @@ async function gql<T>(query: string, variables?: Record<string, any>): Promise<T
     body: JSON.stringify({ query, variables }),
     next: { revalidate: 60 }, // ISR
   });
-  if (!res.ok) throw new Error(`GraphQL HTTP ${res.status}`);
+
+  if (!res.ok) {
+    console.error(`GraphQL HTTP ${res.status} - ${res.statusText}`);
+    throw new Error(`GraphQL HTTP ${res.status}`);
+  }
+
   const json: GqlResponse<T> = await res.json();
-  if (json.errors) throw new Error('GraphQL errors');
+
+  if (json.errors) {
+    // 👇 Este bloque es el que debes agregar
+    console.error('WPGraphQL errors:', JSON.stringify(json.errors, null, 2));
+
+    // Si quieres, puedes imprimir también la query para depurar
+    console.error('Query with error:', query);
+
+    throw new Error(json.errors[0]?.message || 'GraphQL errors');
+  }
+
   return json.data;
 }
 
