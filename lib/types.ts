@@ -34,8 +34,6 @@ export type SiteCustomSettings = {
 export type SiteFooterSettings = {
   logo: null | {
     url: string;
-    id?: string | null;
-    mediaItemId?: number | null;
   };
   phoneNumber: string;
   localAddress: string;

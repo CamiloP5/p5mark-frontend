@@ -197,31 +197,28 @@ export async function getSiteCustomSettings(): Promise<SiteCustomSettings> {
 }
 
 function mapLogoFooter(raw: any) {
-  // Soporta: logoFooter { id, mediaItemUrl, mediaItemId }  ó  logoFooter { node { ... } }
-  const n = raw?.node ?? raw;
-  if (!n?.mediaItemUrl) return null;
+  // raw es { node: { mediaItemUrl: '...' } }
+  const url = raw?.node?.mediaItemUrl;
+  
+  if (!url) return null;
+  
   return {
-    url: n.mediaItemUrl as string,
-    id: (n.id as string) ?? null,
-    mediaItemId: (n.mediaItemId as number) ?? null,
+    url: url as string,
+    id: null, // No lo pedimos en la query (y no estaba disponible)
+    mediaItemId: null, // No lo pedimos en la query (y no estaba disponible)
   };
 }
 
 export async function getFooterSettings(): Promise<SiteFooterSettings> {
+  // Esta es la query exacta que confirmaste que funciona
   const query = /* GraphQL */ `
     query FooterSettings {
       settingsFooter {
         siteFooterSettings {
           logoFooter {
-            id
-            mediaItemUrl
-            mediaItemId
-            # Si tu esquema usa node{} descomenta el bloque de abajo
-            # node {
-            #   id
-            #   mediaItemUrl
-            #   mediaItemId
-            # }
+            node {
+              mediaItemUrl
+            }
           }
           phoneNumber
           localAddress
@@ -231,23 +228,36 @@ export async function getFooterSettings(): Promise<SiteFooterSettings> {
     }
   `;
 
-  const data = await gql<{
-    settingsFooter?: {
-      siteFooterSettings?: {
-        logoFooter?: any;
-        phoneNumber?: string | null;
-        localAddress?: string | null;
-        contactEmail?: string | null;
+  try {
+    const data = await gql<{
+      settingsFooter?: {
+        siteFooterSettings?: {
+          logoFooter?: { node?: { mediaItemUrl?: string | null } | null } | null;
+          phoneNumber?: string | null;
+          localAddress?: string | null;
+          contactEmail?: string | null;
+        } | null;
       } | null;
-    } | null;
-  }>(query);
+    }>(query);
 
-  const s = data?.settingsFooter?.siteFooterSettings;
-
-  return {
-    logo: mapLogoFooter(s?.logoFooter),
-    phoneNumber: s?.phoneNumber ?? '',
-    localAddress: s?.localAddress ?? '',
-    contactEmail: s?.contactEmail ?? '',
-  };
+    const s = data?.settingsFooter?.siteFooterSettings;
+    
+    // mapLogoFooter (la versión de arriba) ahora manejará esto correctamente
+    return {
+      logo: mapLogoFooter(s?.logoFooter), 
+      phoneNumber: s?.phoneNumber ?? '',
+      localAddress: s?.localAddress ?? '',
+      contactEmail: s?.contactEmail ?? '',
+    };
+    
+  } catch (e) {
+    console.error('getFooterSettings(): failed to fetch settings', e);
+    // Fallback de seguridad
+    return {
+      logo: null,
+      phoneNumber: '',
+      localAddress: '',
+      contactEmail: '',
+    };
+  }
 }
